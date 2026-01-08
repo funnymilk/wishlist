@@ -1,0 +1,28 @@
+# Exclude alembic migrations and models
+alembic
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual envs
+.venv/
+venv/
+
+# Tests
+tests/
+
+# Env files
+.env
+.env.*
+
+# Editor files
+.vscode/
+.idea/
+
+# Misc
+dist/
+build/
+coverage/
