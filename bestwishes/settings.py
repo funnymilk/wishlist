@@ -31,7 +31,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'betswishes.urls'
+ROOT_URLCONF = 'bestwishes.urls'
 
 TEMPLATES = [
     {
@@ -49,7 +49,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'betswishes.wsgi.application'
+WSGI_APPLICATION = 'bestwishes.wsgi.application'
 
 DATABASES = {
     'default': {
