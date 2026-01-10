@@ -25,8 +25,7 @@ Notes:
 
 - The image installs dependencies from `poetry.lock` / `pyproject.toml` (no virtualenv).
 - `alembic/` is excluded via `.dockerignore` and is not copied into the image.
-- For local development with live reload, bind-mount the project into `/app` as shown above so `uvicorn --reload` (already used in CMD) sees file changes.
-- Ensure `uvicorn` is listed in your `pyproject.toml` dependencies so the container can run the app.
+- The app now uses Django + DRF. For local development with live reload use `python manage.py runserver` (ensure `Django` and `djangorestframework` are added to `pyproject.toml`).
 
 ## 🧩 Docker Compose
 

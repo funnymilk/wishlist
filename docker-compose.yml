@@ -18,8 +18,8 @@ services:
 
   app:
     build: .
-    # Start Uvicorn; rely on db healthcheck and depends_on condition for ordering
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # Start Django dev server; rely on db healthcheck and depends_on condition for ordering
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./:/app
     ports:
