@@ -1,54 +1,129 @@
-# wishlist
-educational project
+# BestWishes
 
-## 🚀 Docker
+Educational backend project for a wishlist / gift management service.
 
-Build the image (from project root):
+Проект находится в активной стадии разработки и используется для изучения Django, Django ORM и архитектуры backend-приложений.
 
-```bash
-docker build -t wishlist-app .
-```
+---
 
-Run the container (Linux / macOS):
+## 🧠 Текущий статус проекта
 
-```bash
-docker run --rm -p 8000:8000 wishlist-app
-```
+- Backend на **Django + Django REST Framework**
+- Архитектура построена по **domain-driven принципу**
+- Проект **не завершён**, функциональность реализуется поэтапно
 
-Run the container (PowerShell on Windows):
+---
 
-```powershell
-docker run --rm -p 8000:8000 -v ${PWD}:/app wishlist-app
-```
+## 🧩 Домены (Django apps)
 
-Notes:
+Проект разделён на доменные приложения:
 
-- The image installs dependencies from `poetry.lock` / `pyproject.toml` (no virtualenv).
-- `alembic/` is excluded via `.dockerignore` and is not copied into the image.
-- The app now uses Django + DRF. For local development with live reload use `python manage.py runserver` (ensure `Django` and `djangorestframework` are added to `pyproject.toml`).
+- `users` — пользовательская модель (кастомный User)
+- `wishlists` — списки желаний
+- `gifts` — подарки
+
+Связи между доменами:
+
+- User → Wishlist (1:N)
+- User → Gift (1:N)
+- Wishlist ↔ Gift (M:N через промежуточную таблицу)
+
+---
+
+## 👤 Пользовательская модель
+
+Используется **кастомная User-модель**:
+
+- Email — основной идентификатор пользователя
+- Пароль хранится в виде хэша (через `AbstractBaseUser`)
+- В настройках проекта явно указана пользовательская модель
+
+---
+
+## 🗄️ База данных
+
+- Для разработки используется **PostgreSQL**
+- Управление схемой — через **Django migrations**
+- ORM — стандартный Django ORM
+
+---
+
+## 🐳 Docker
+
+### Dockerfile
+
+- Python + Poetry
+- Зависимости устанавливаются из `pyproject.toml` / `poetry.lock`
+- Виртуальные окружения Poetry отключены
+- Запуск через `python manage.py runserver`
+
+---
 
 ## 🧩 Docker Compose
 
-1. Copy `.env.example` to `.env` and edit credentials if desired:
+В проекте используется `docker-compose` с двумя сервисами:
 
-```bash
-cp .env.example .env
-```
+### db
 
-2. Build and run (detached):
+- PostgreSQL
+- Данные сохраняются в named volume
+- Используется healthcheck (`pg_isready`)
 
-```bash
-docker compose up -d --build
-```
+### app
 
-3. Stop and remove services and volumes:
+- Django-приложение
+- Код проекта примонтирован в контейнер (bind mount)
+- Django запускается в dev-режиме
+- Приложение ожидает готовности базы данных
 
-```bash
-docker compose down -v
-```
+---
 
-Notes:
+## ▶️ Запуск проекта
 
-- The `db` service uses `postgres:15` and stores data in the `postgres_data` named volume.
-- The `app` service mounts the project directory for live reload; remove the mount if you prefer a static image for production.
-- The application connects to the database using `DATABASE_URL` pointing to host `db` inside the compose network.
+### 1. Подготовка окружения
+
+Скопировать файл окружения:
+
+    cp .env.example .env
+
+При необходимости отредактировать переменные окружения.
+
+---
+
+### 2. Сборка и запуск
+
+    docker compose up --build
+
+---
+
+### 3. Проверка
+
+Открыть в браузере:
+
+    http://localhost:8000/
+
+На текущем этапе может возвращаться пустой ответ или заглушка.
+
+---
+
+## ⚠️ Важно
+
+- Миграции выполняются **осознанно и вручную**
+- Архитектура развивается постепенно
+- Аутентификация, авторизация, CI/CD и production-настройки **не являются текущей целью**
+
+---
+
+## 🎯 Цель проекта
+
+- Разобраться в Django
+- Освоить Django ORM и систему миграций
+- Сравнить подходы Django и FastAPI
+- Построить чистую доменную архитектуру
+
+---
+
+## 📌 Примечание
+
+Проект является **учебным**.
+Структура и архитектурные решения могут изменяться по мере изучения фреймворка.
