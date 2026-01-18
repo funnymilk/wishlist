@@ -1,9 +1,10 @@
-from django.urls import path
-from django.http import HttpResponse
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import GiftViewSet
 
-def health(request):
-    return HttpResponse("users ok")
+router = DefaultRouter()
+router.register("", GiftViewSet, basename="gift")
 
 urlpatterns = [
-    path("", health),
+    path("", include(router.urls)),
 ]
