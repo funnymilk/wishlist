@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-
+from django.core.validators import MinValueValidator
 
 class Gift(models.Model):
     class Status(models.TextChoices):
@@ -9,8 +9,8 @@ class Gift(models.Model):
         GIFTED = "gifted", "Gifted"
 
     name = models.CharField(max_length=255)
-    link = models.URLField(blank=True)
-    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    link = models.URLField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
     image = models.URLField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
 

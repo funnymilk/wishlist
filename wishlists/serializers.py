@@ -16,7 +16,7 @@ class WishlistGiftSerializer(serializers.ModelSerializer):
 class CreateGiftForWishlistSerializer(serializers.Serializer):
     """Serializer for creating a new gift to add to a wishlist."""
     name = serializers.CharField(max_length=255, required=True)
-    link = serializers.URLField(required=False, allow_blank=True)
+    link = serializers.URLField(required=False, allow_blank=True, allow_null=True)
     cost = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
