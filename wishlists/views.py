@@ -9,7 +9,7 @@ from .serializers import (
     CreateGiftForWishlistSerializer,
 )
 from gifts.models import Gift
-
+from wishlists.services import add_gift_to_wishlist, create_and_add_gift_to_wishlist
 
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
@@ -36,30 +36,13 @@ class WishlistViewSet(viewsets.ModelViewSet):
                 {'error': 'gift_id is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        try:
-            gift = Gift.objects.get(id=gift_id)
-        except Gift.DoesNotExist:
-            return Response(
-                {'error': 'Gift not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Check if gift already in wishlist
-        if wishlist.gifts.filter(id=gift_id).exists():
-            return Response(
-                {'error': 'Gift already in this wishlist'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Create the relationship
-        wishlist_gift = WishlistGift.objects.create(
+        result = add_gift_to_wishlist(
+            user=request.user,
             wishlist=wishlist,
-            gift=gift
+            gift_id=int(gift_id)
         )
 
-        serializer = WishlistGiftSerializer(wishlist_gift)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(WishlistGiftSerializer(result.wishlist_gift).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='gifts/new')
     def create_gift(self, request, pk=None):
@@ -74,18 +57,9 @@ class WishlistViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create the gift for the authenticated user
-        gift = Gift.objects.create(
+        result = create_and_add_gift_to_wishlist(
             user=request.user,
-            **serializer.validated_data
-        )
-
-        # Create the wishlist-gift relationship
-        wishlist_gift = WishlistGift.objects.create(
             wishlist=wishlist,
-            gift=gift
+            gift_data=serializer.validated_data
         )
-
-        # Return the created gift with wishlist relationship
-        response_serializer = WishlistGiftSerializer(wishlist_gift)
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(WishlistGiftSerializer(result.wishlist_gift).data, status=status.HTTP_201_CREATED)

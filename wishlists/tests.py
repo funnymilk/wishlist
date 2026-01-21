@@ -1,28 +1,3 @@
-"""
-
-Write Django unit tests (django.test.TestCase) for wishlists serializers.
-IMPORTANT RULES:
-- Do NOT test Meta.fields or serializer.fields.keys().
-- Do NOT assert "field exists" only. Test BEHAVIOR and OUTPUT.
-- Use real DB objects (create User, Wishlist, Gift, WishlistGift) in test database.
-- No APIClient, no reverse, no HTTP calls (not integration).
-- Prefer minimal test data.
-
-Serializers to test:
-- WishlistGiftSerializer: gift is nested GiftSerializer(read_only=True). Verify output contains nested gift dict with correct id and name.
-- CreateGiftForWishlistSerializer: validate_link and validate_image should return "" when given empty string or None; status defaults to Gift.Status.AVAILABLE; cost can be None.
-- WishlistSerializer: gifts representation should be empty list when no gifts; after creating WishlistGift relation, gifts output should include the gift (id or nested object depending on serializer behavior).
-
-Create tests:
-1) test_wishlist_gift_serializes_nested_gift
-2) test_create_gift_serializer_empty_link_becomes_empty_string
-3) test_create_gift_serializer_empty_image_becomes_empty_string
-4) test_wishlist_serializer_gifts_empty_list_when_no_relations
-5) test_wishlist_serializer_gifts_contains_gift_after_relation
-
-"""
-
-
 import unittest
 from gifts.models import Gift
 from wishlists.models import Wishlist, WishlistGift
@@ -31,6 +6,7 @@ from django.test import TestCase
 from rest_framework.exceptions import ValidationError
 from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
+from wishlists.services import add_gift_to_wishlist, create_and_add_gift_to_wishlist
 
 User = get_user_model()
 
@@ -44,7 +20,7 @@ class WishlistSerializersTestCase(TestCase):
         self.wishlist = Wishlist.objects.create(name='Test Wishlist', user=self.user)
 
     def test_wishlist_gift_serializes_nested_gift(self):
-        gift = Gift.objects.create(user_id=1, name='Test Gift', link='http://example.com', image='http://example.com/image.jpg', status=Gift.Status.AVAILABLE)
+        gift = Gift.objects.create(user_id=self.user.id, name='Test Gift', link='http://example.com', image='http://example.com/image.jpg', status=Gift.Status.AVAILABLE)
         wishlist_gift = WishlistGift.objects.create(wishlist=self.wishlist, gift=gift)
 
         serializer = WishlistGiftSerializer(wishlist_gift)
@@ -85,5 +61,91 @@ class WishlistSerializersTestCase(TestCase):
 
     def test_wishlist_serializer_gifts_contains_gift_after_relation(self):
         
-        gift = Gift.objects.create(user_id=1, name='Test Gift', link='http://example.com', image='http://example.com/image.jpg', status=Gift.Status.AVAILABLE)
+        gift = Gift.objects.create(user_id=self.user.id, name='Test Gift', link='http://example.com', image='http://example.com/image.jpg', status=Gift.Status.AVAILABLE)
         WishlistGift.objects.create(wishlist=self.wishlist, gift=gift)
+
+class TestWishlistServices(TestCase):
+    """Unit tests for wishlist services."""
+
+    def setUp(self):
+        # Create a user for testing        
+        self.user = User.objects.create_user(email='testuser', password='testpass')
+
+        # Create a wishlist for testing
+        self.wishlist = Wishlist.objects.create(name='Test Wishlist', user=self.user)
+
+    @patch("wishlists.services.WishlistGift")
+    @patch('wishlists.services.Gift')
+    def test_create_and_add_gift_to_wishlist_creates_gift(self, MockGift, MockWishlistGift):
+        """Test that create_and_add_gift_to_wishlist creates a Gift."""
+        gift_data = {
+            'name': 'New Gift',
+            'link': 'http://example.com',
+            'cost': 20.0,
+            'image': 'http://example.com/image.jpg',
+            'status': Gift.Status.AVAILABLE
+        }
+
+        mock_gift_instance = Mock()
+        MockGift.objects.create.return_value = mock_gift_instance
+
+        MockWishlistGift.objects.filter.return_value.exists.return_value = False
+        MockWishlistGift.objects.create.return_value = Mock()
+
+        result = create_and_add_gift_to_wishlist(
+            user=self.user,
+            wishlist=self.wishlist,
+            gift_data=gift_data
+        )
+
+        MockGift.objects.create.assert_called_once_with(user=self.user, **gift_data)
+        self.assertEqual(result.gift, mock_gift_instance)
+        self.assertEqual(result.wishlist_gift, MockWishlistGift.objects.create.return_value)
+
+    @patch('wishlists.services.WishlistGift')
+    def test_create_gift_to_wishlist_raises_if_gift_already_in_wishlist(self, MockWishlistGift):
+        gift_data = {
+            'name': 'Existing Gift',
+            'link': 'http://example.com',
+            'cost': 20.0,
+            'image': 'http://example.com/image.jpg',
+            'status': Gift.Status.AVAILABLE
+        }
+
+        mock_gift_instance = Mock()
+        mock_gift_instance.id = 1
+
+        with patch('wishlists.services.Gift.objects.create', return_value=mock_gift_instance):
+            MockWishlistGift.objects.filter.return_value.exists.return_value = True
+
+            with self.assertRaises(ValidationError) as context:
+                create_and_add_gift_to_wishlist(
+                    user=self.user,
+                    wishlist=self.wishlist,
+                    gift_data=gift_data
+                )
+
+            self.assertEqual(str(context.exception.detail[0]), "Gift already in this wishlist.")
+        MockWishlistGift.objects.filter.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)
+
+    @patch('wishlists.services.WishlistGift')
+    def test_add_gift_to_wishlist(self, MockWishlistGift):
+        """Test that add_gift_to_wishlist adds an existing gift to the wishlist."""
+        mock_gift_instance = Mock()
+        mock_gift_instance.id = 1
+
+        with patch('wishlists.services.Gift.objects.get', return_value=mock_gift_instance):
+            MockWishlistGift.objects.filter.return_value.exists.return_value = False
+            mock_wishlist_gift_instance = Mock()
+            MockWishlistGift.objects.create.return_value = mock_wishlist_gift_instance
+
+            result = add_gift_to_wishlist(
+                user=self.user,
+                wishlist=self.wishlist,
+                gift_id=mock_gift_instance.id
+            )
+
+        self.assertEqual(result.gift, mock_gift_instance)
+        self.assertEqual(result.wishlist_gift, mock_wishlist_gift_instance)
+        MockWishlistGift.objects.filter.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)
+        MockWishlistGift.objects.create.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)

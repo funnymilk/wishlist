@@ -11,7 +11,7 @@ class Gift(models.Model):
     name = models.CharField(max_length=255)
     link = models.URLField(null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
-    image = models.URLField(blank=True)
+    image = models.URLField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
 
     user = models.ForeignKey(

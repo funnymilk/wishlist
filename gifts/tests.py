@@ -1,6 +1,3 @@
-"""
-Okay! Let's generate Unit tests for gift domain. pure unit tests for gifts domain
-"""
 import unittest
 from gifts.models import Gift
 from gifts.serializers import GiftSerializer
