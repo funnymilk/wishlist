@@ -63,9 +63,14 @@ class WishlistSerializersTestCase(TestCase):
         
         gift = Gift.objects.create(user_id=self.user.id, name='Test Gift', link='http://example.com', image='http://example.com/image.jpg', status=Gift.Status.AVAILABLE)
         WishlistGift.objects.create(wishlist=self.wishlist, gift=gift)
+        serializer = WishlistSerializer(self.wishlist)
+        data = serializer.data
+        self.assertIn('gifts', data)
+        self.assertEqual(len(data['gifts']), 1)
+        self.assertEqual(data["gifts"][0], gift.id)
+
 
 class TestWishlistServices(TestCase):
-    """Unit tests for wishlist services."""
 
     def setUp(self):
         # Create a user for testing        
@@ -77,7 +82,6 @@ class TestWishlistServices(TestCase):
     @patch("wishlists.services.WishlistGift")
     @patch('wishlists.services.Gift')
     def test_create_and_add_gift_to_wishlist_creates_gift(self, MockGift, MockWishlistGift):
-        """Test that create_and_add_gift_to_wishlist creates a Gift."""
         gift_data = {
             'name': 'New Gift',
             'link': 'http://example.com',
@@ -130,7 +134,6 @@ class TestWishlistServices(TestCase):
 
     @patch('wishlists.services.WishlistGift')
     def test_add_gift_to_wishlist(self, MockWishlistGift):
-        """Test that add_gift_to_wishlist adds an existing gift to the wishlist."""
         mock_gift_instance = Mock()
         mock_gift_instance.id = 1
 
@@ -149,3 +152,40 @@ class TestWishlistServices(TestCase):
         self.assertEqual(result.wishlist_gift, mock_wishlist_gift_instance)
         MockWishlistGift.objects.filter.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)
         MockWishlistGift.objects.create.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)
+
+    @patch('wishlists.services.WishlistGift')
+    def test_add_gift_to_wishlist_raises_if_gift_already_in_wishlist(self, MockWishlistGift):
+        mock_gift_instance = Mock()
+        mock_gift_instance.id = 1
+
+        with patch('wishlists.services.Gift.objects.get', return_value=mock_gift_instance):
+            MockWishlistGift.objects.filter.return_value.exists.return_value = True
+
+            with self.assertRaises(ValidationError) as context:
+                add_gift_to_wishlist(
+                    user=self.user,
+                    wishlist=self.wishlist,
+                    gift_id=mock_gift_instance.id
+                )
+
+            self.assertEqual(str(context.exception.detail[0]), "Gift already in this wishlist.")
+        MockWishlistGift.objects.filter.assert_called_once_with(wishlist=self.wishlist, gift=mock_gift_instance)
+
+    def test_ensure_wishlist_ownership_raises_for_different_user(self):
+        other_user = User.objects.create_user(email='otheruser', password='otherpass')
+        with self.assertRaises(ValidationError) as context:
+            from wishlists.services import _ensure_wishlist_ownership
+            _ensure_wishlist_ownership(self.wishlist, other_user)
+        self.assertEqual(str(context.exception.detail[0]), "You do not have permission to modify this wishlist.")
+
+    def test_gift_not_found_raises(self):
+        with patch('wishlists.services.Gift.objects.get', side_effect=Gift.DoesNotExist):
+            with self.assertRaises(Exception) as context:
+                add_gift_to_wishlist(
+                    user=self.user,
+                    wishlist=self.wishlist,
+                    gift_id=999
+                )
+            self.assertEqual(str(context.exception), "Gift not found.")
+
+
