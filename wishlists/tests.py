@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from unittest.mock import Mock, patch
 from django.contrib.auth import get_user_model
 from wishlists.services import add_gift_to_wishlist, create_and_add_gift_to_wishlist
+from wishlists.services import _ensure_wishlist_ownership
 
 User = get_user_model()
 
@@ -174,7 +175,6 @@ class TestWishlistServices(TestCase):
     def test_ensure_wishlist_ownership_raises_for_different_user(self):
         other_user = User.objects.create_user(email='otheruser', password='otherpass')
         with self.assertRaises(ValidationError) as context:
-            from wishlists.services import _ensure_wishlist_ownership
             _ensure_wishlist_ownership(self.wishlist, other_user)
         self.assertEqual(str(context.exception.detail[0]), "You do not have permission to modify this wishlist.")
 

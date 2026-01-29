@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import Mock, patch
+from django.db import IntegrityError
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
-from .serializers import UserRegistrationSerializer, UserLoginSerializer
-from .models import User
+from ...serializers import UserRegistrationSerializer, UserLoginSerializer
+from ...models import User
 
 
 class TestUserRegistrationSerializerValidation(TestCase):
@@ -218,5 +219,52 @@ class TestUserLoginSerializerValidation(TestCase):
         
         self.assertFalse(is_valid)
 
+class TestUserManager(TestCase):
+    """Unit tests for UserManager methods."""
 
+    def test_create_user_successful(self):
+        """Test successful user creation."""
+        email = 'newuser@example.com'
+        password = 'testpass123'
+        user = User.objects.create_user(email=email, password=password)
+        self.assertEqual(user.email, email)
+        self.assertTrue(user.check_password(password))
+
+    def test_create_user_without_email(self):
+        """Test that creating a user without an email raises an error."""
+        with self.assertRaises(ValueError):
+            User.objects.create_user(email=None, password='testpass123')
+
+    def test_create_user_without_password(self):
+        """Test that creating a user without an password raises an error."""
+        user = User.objects.create_user(email='newuser@example.com', password=None)
+        self.assertFalse(user.has_usable_password())
+        self.assertEqual(user.email, 'newuser@example.com')
+
+    def test_create_user_double_email(self):
+        """Test that creating a user with duplicate email raises an error."""
+        email = 'newuser@example.com'
+        User.objects.create_user(email=email, password='testpass123')
+        with self.assertRaises(IntegrityError):
+            User.objects.create_user(email=email, password='testpass123')
+
+    def test_create_superuser_successful(self):
+        """Test successful superuser creation."""
+        email = 'superuser@example.com'
+        password = 'superpass123'
+        superuser = User.objects.create_superuser(email=email, password=password)
+        self.assertEqual(superuser.email, email)
+        self.assertTrue(superuser.check_password(password))
+        self.assertTrue(superuser.is_staff)
+        self.assertTrue(superuser.is_superuser)
+
+    def test_create_superuser_without_is_staff(self):
+        """Test that creating a superuser without is_staff=True raises an error."""
+        with self.assertRaises(ValueError):
+            User.objects.create_superuser(email='superuser@example.com', password='superpass123', is_staff=False)
+
+    def test_create_superuser_without_is_superuser(self):
+        """Test that creating a superuser without is_superuser=True raises an error."""
+        with self.assertRaises(ValueError):
+            User.objects.create_superuser(email='superuser@example.com', password='superpass123', is_superuser=False)
 
