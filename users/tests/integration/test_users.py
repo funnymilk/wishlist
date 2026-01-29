@@ -7,8 +7,8 @@ from users.serializers import UserRegistrationSerializer, UserLoginSerializer
 
 class UserIntegrationTests(APITestCase):
     def setUp(self):
-        self.registration_url = reverse('user-register')
-        self.login_url = reverse('user-login')
+        self.registration_url = reverse("register")
+        self.login_url = reverse("login")
 
     def test_user_registration(self):
         """ Test user registration endpoint. """
@@ -67,8 +67,7 @@ class UserIntegrationTests(APITestCase):
         }
         response = self.client.post(self.login_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('token', response.data)
-        self.assertTrue(response.data["token"])
+        self.assertIn("sessionid", response.cookies)
     
     def test_invalid_password_login(self):
         User.objects.create_user(
